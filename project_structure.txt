@@ -1,0 +1,35 @@
+﻿pyspark-performance-engineering/
+|
++-- business/
+|   +-- __init__.py
+|   +-- baseline.py
+|   +-- ingestion.py
+|   +-- metrics.py
+|   +-- optimized.py
+|   +-- publishing.py
+|   +-- transformations.py
+|   +-- validation.py
+|
++-- data/
+|   +-- __init__.py
+|   +-- generator/
+|   |   +-- __init__.py
+|   |   +-- generate_data.py
+|   +-- input/
+|       +-- customers.csv
+|       +-- orders.csv
+|
++-- presentation/
+|   +-- __init__.py
+|   +-- config.py
+|   +-- main.py
+|   +-- report.py
+|
++-- tests/
+|   +-- __init__.py
+|   +-- test_pipeline.py
+|
++-- .gitignore
++-- README.md
++-- requirements.txt
++-- project_structure.txt

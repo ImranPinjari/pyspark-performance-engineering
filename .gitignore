@@ -1,0 +1,13 @@
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.idea/
+.vscode/
+*.log
+worker_debug.py
+worker_diagnostic.py
+worker_diagnostic.log
+worker_startup.log
+data/output/
