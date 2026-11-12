@@ -1,3 +1,4 @@
+
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import broadcast
 
@@ -6,10 +7,7 @@ from business.ingestion import (
     ingest_orders,
 )
 
-from business.validation import (
-    validate_customers,
-    validate_orders,
-)
+from business.data_quality import validate_pipeline_data
 
 from business.transformations import aggregate_customer_sales
 
@@ -22,26 +20,23 @@ def run_optimized(
     """
     Execute the optimized e-commerce ETL pipeline.
 
-    Uses a broadcast join for customer enrichment to reduce
-    shuffle overhead when the customer dimension is small.
+    Uses shared data-quality checks and a broadcast join
+    for customer enrichment to reduce shuffle overhead.
     """
 
     # Step 1: Ingest datasets
     customers = ingest_customers(spark, customers_path)
     orders = ingest_orders(spark, orders_path)
 
-    # Step 2: Validate customers
-    valid_customers, rejected_customers = validate_customers(
-        customers
-    )
-
-    # Step 3: Validate orders
-    valid_orders, rejected_orders = validate_orders(
-        orders,
+    # Step 2: Apply shared data-quality checks
+    (
         valid_customers,
-    )
+        rejected_customers,
+        valid_orders,
+        rejected_orders,
+    ) = validate_pipeline_data(customers, orders)
 
-    # Step 4: Prepare customer dimension for broadcast join
+    # Step 3: Prepare customer dimension for broadcast join
     customer_details = broadcast(
         valid_customers.select(
             "customer_id",
@@ -50,14 +45,14 @@ def run_optimized(
         )
     )
 
-    # Step 5: Enrich orders using broadcast join
+    # Step 4: Enrich orders using broadcast join
     enriched_orders = valid_orders.join(
         customer_details,
         on="customer_id",
         how="inner",
     )
 
-    # Step 6: Aggregate customer sales
+    # Step 5: Aggregate customer sales
     customer_summary = aggregate_customer_sales(
         enriched_orders
     )
