@@ -1,3 +1,4 @@
+
 import pytest
 
 from business.ingestion import (
@@ -6,6 +7,7 @@ from business.ingestion import (
     ORDER_SCHEMA,
 )
 from business.validation import validate_customers, validate_orders
+from business.customer_deduplication import separate_duplicate_customers
 
 
 @pytest.fixture(scope="module")
@@ -127,3 +129,30 @@ def test_order_duplicate_business_rules_and_references(spark, tmp_path):
     assert reasons["NULL_ORDER_DATE"] == 1
     assert reasons["NULL_AMOUNT"] == 1
     assert reasons["NULL_STATUS"] == 1
+
+
+def test_duplicate_customer_ids_are_detected(spark, tmp_path):
+    customers_file = tmp_path / "duplicate_customers.csv"
+
+    customers_file.write_text(
+        "customer_id,customer_name,email,city,registration_date\n"
+        "1,Customer One,one@example.com,Pune,2025-01-01\n"
+        "1,Customer One Duplicate,duplicate@example.com,Mumbai,2025-01-02\n"
+        "2,Customer Two,two@example.com,Nashik,2025-01-03\n",
+        encoding="utf-8",
+    )
+
+    customers = read_csv(spark, customers_file, CUSTOMER_SCHEMA)
+
+    unique, rejected = separate_duplicate_customers(customers)
+
+    assert unique.count() == 1
+    assert rejected.count() == 2
+
+    reasons = {
+        row["reject_reason"]: row["count"]
+        for row in rejected.groupBy("reject_reason").count().collect()
+    }
+
+    assert reasons["DUPLICATE_CUSTOMER_ID"] == 2
+    assert unique.select("customer_id").first()[0] == 2
